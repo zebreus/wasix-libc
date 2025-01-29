@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -Eeuxo pipefail
 
@@ -21,7 +21,7 @@ cargo run --manifest-path tools/wasi-headers/Cargo.toml generate-libc
 cp -f libc-bottom-half/headers/public/wasi/api.h libc-bottom-half/headers/public/wasi/api_wasi.h
 
 # Emit the API header
-cat > libc-bottom-half/headers/public/wasi/api.h<<EOF
+cat >libc-bottom-half/headers/public/wasi/api.h <<EOF
 #include "api_wasi.h"
 #include "api_wasix.h"
 #include "api_poly.h"
