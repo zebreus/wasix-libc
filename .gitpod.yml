@@ -9,7 +9,7 @@ tasks:
       sudo apt update -y
       sudo apt remove -y llvm clang lld llvm-19 clang-19 lld-19
       sudo apt autoremove -y
-      sudo apt install -y coreutils nodejs npm wget git cmake ninja-build llvm-14 clang-14 rsync make lld-14 wasm-opt cargo python3
+      sudo apt install -y coreutils nodejs npm wget git cmake ninja-build llvm-14 clang-14 rsync make lld-14 binaryen cargo python3
       sudo ln -fs /usr/bin/clang-14 /usr/bin/clang
       sudo ln -fs /usr/bin/clang++-14 /usr/bin/clang++
       sudo ln -fs /usr/bin/llvm-ar-14 /usr/bin/llvm-ar
