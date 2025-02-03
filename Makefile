@@ -487,7 +487,6 @@ MUSL_OMIT_HEADERS += \
     "mntent.h" \
     "resolv.h" \
     "pty.h" \
-    "dlfcn.h" \
     "ulimit.h" \
     "sys/xattr.h" \
     "wordexp.h" \

@@ -743,6 +743,10 @@ difftime
 dirfd
 dirname
 div
+dlclose
+dlerror
+dlopen
+dlsym
 dngettext
 dprintf
 drand48
