@@ -1555,6 +1555,14 @@ _Static_assert(sizeof(__wasi_tid_t) == 4, "witx calculated size");
 _Static_assert(_Alignof(__wasi_tid_t) == 4, "witx calculated align");
 
 /**
+ * A thread handle
+ */
+typedef int __wasi_dlopenid_t;
+
+_Static_assert(sizeof(__wasi_dlopenid_t) == 4, "witx calculated size");
+_Static_assert(_Alignof(__wasi_dlopenid_t) == 4, "witx calculated align");
+
+/**
  * Represents an optional process ID
  */
 typedef union __wasi_option_pid_u_t {
@@ -4598,6 +4606,45 @@ __wasi_errno_t __wasi_epoll_wait(
      */
     __wasi_timestamp_t timeout,
     __wasi_size_t *retptr0
+) __attribute__((__warn_unused_result__));
+/**
+ * Attempts to open a wasm library.
+ * @return
+ * A handle of the library or an error code
+ */
+__wasi_errno_t __wasi_dl_open(
+    /**
+     * Path to the library
+     */
+    const char *path,
+    __wasi_dlopenid_t *retptr0
+) __attribute__((__warn_unused_result__));
+/**
+ * Load a symbol from a dynamically linked library
+ * @return
+ * Returns the address of the symbol.
+ * In case of a function there is a index in the indirect function table at that address
+ * Not sure yet, whether this address should be relative to the module or absolute. Probably absolute.
+ */
+__wasi_errno_t __wasi_dl_load_symbol(
+    /**
+     * Name of the symbol to be loaded
+     */
+    const char *symbol,
+    /**
+     * Handle to the library
+     */
+    __wasi_dlopenid_t handle,
+    __wasi_pointersize_t *retptr0
+) __attribute__((__warn_unused_result__));
+/**
+ * Close a dynamically linked library
+ */
+__wasi_errno_t __wasi_dl_close(
+    /**
+     * Handle of the library to be closed
+     */
+    __wasi_dlopenid_t handle
 ) __attribute__((__warn_unused_result__));
 /** @} */
 

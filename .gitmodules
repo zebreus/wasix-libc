@@ -1,9 +1,9 @@
 [submodule "tools/wasi-headers/WASI"]
-	path = tools/wasi-headers/WASI
-	url = https://github.com/WebAssembly/WASI
+path = tools/wasi-headers/WASI
+url = https://github.com/WebAssembly/WASI
 [submodule "tools/wasix-headers/WASI"]
-	path = tools/wasix-headers/WASI
-	url = https://github.com/wasix-org/wasix-witx.git
+path = tools/wasix-headers/WASI
+url = https://github.com/zebreus/wasix-witx
 [submodule "tools/llvm-project"]
-	path = tools/llvm-project
-	url = https://github.com/llvm/llvm-project.git
+path = tools/llvm-project
+url = https://github.com/llvm/llvm-project.git
