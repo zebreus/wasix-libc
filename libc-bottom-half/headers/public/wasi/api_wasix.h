@@ -1555,12 +1555,12 @@ _Static_assert(sizeof(__wasi_tid_t) == 4, "witx calculated size");
 _Static_assert(_Alignof(__wasi_tid_t) == 4, "witx calculated align");
 
 /**
- * A thread handle
+ * A library handle
  */
-typedef int __wasi_dlopenid_t;
+typedef int __wasi_dl_handle_t;
 
-_Static_assert(sizeof(__wasi_dlopenid_t) == 4, "witx calculated size");
-_Static_assert(_Alignof(__wasi_dlopenid_t) == 4, "witx calculated align");
+_Static_assert(sizeof(__wasi_dl_handle_t) == 4, "witx calculated size");
+_Static_assert(_Alignof(__wasi_dl_handle_t) == 4, "witx calculated align");
 
 /**
  * Represents an optional process ID
@@ -4617,7 +4617,7 @@ __wasi_errno_t __wasi_dl_open(
      * Path to the library
      */
     const char *path,
-    __wasi_dlopenid_t *retptr0
+    __wasi_dl_handle_t *retptr0
 ) __attribute__((__warn_unused_result__));
 /**
  * Load a symbol from a dynamically linked library
@@ -4625,6 +4625,7 @@ __wasi_errno_t __wasi_dl_open(
  * Returns the address of the symbol.
  * In case of a function there is a index in the indirect function table at that address
  * Not sure yet, whether this address should be relative to the module or absolute. Probably absolute.
+ * TODO: Figure out what exactly should be returned here.
  */
 __wasi_errno_t __wasi_dl_load_symbol(
     /**
@@ -4634,7 +4635,7 @@ __wasi_errno_t __wasi_dl_load_symbol(
     /**
      * Handle to the library
      */
-    __wasi_dlopenid_t handle,
+    __wasi_dl_handle_t handle,
     __wasi_pointersize_t *retptr0
 ) __attribute__((__warn_unused_result__));
 /**
@@ -4644,7 +4645,21 @@ __wasi_errno_t __wasi_dl_close(
     /**
      * Handle of the library to be closed
      */
-    __wasi_dlopenid_t handle
+    __wasi_dl_handle_t handle
+) __attribute__((__warn_unused_result__));
+/**
+ * Get the most recent error from the dynamic linker as a human readable string
+ * @return
+ * The length of the error message.
+ * TODO: Figure out how to differentiate between no error and buffer to small.
+ */
+__wasi_errno_t __wasi_dl_error(
+    /**
+     * A buffer where the error message will be stored
+     */
+    uint8_t * message,
+    __wasi_size_t message_len,
+    __wasi_size_t *retptr0
 ) __attribute__((__warn_unused_result__));
 /** @} */
 

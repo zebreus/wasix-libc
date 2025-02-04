@@ -955,7 +955,7 @@ int32_t __imported_wasix_32v1_dl_open(int32_t arg0, int32_t arg1, int32_t arg2) 
 
 __wasi_errno_t __wasi_dl_open(
     const char *path,
-    __wasi_dlopenid_t *retptr0
+    __wasi_dl_handle_t *retptr0
 ){
     size_t path_len = strlen(path);
     int32_t ret = __imported_wasix_32v1_dl_open((intptr_t) path, (intptr_t) path_len, (intptr_t) retptr0);
@@ -969,7 +969,7 @@ int32_t __imported_wasix_32v1_dl_load_symbol(int32_t arg0, int32_t arg1, int32_t
 
 __wasi_errno_t __wasi_dl_load_symbol(
     const char *symbol,
-    __wasi_dlopenid_t handle,
+    __wasi_dl_handle_t handle,
     __wasi_pointersize_t *retptr0
 ){
     size_t symbol_len = strlen(symbol);
@@ -983,9 +983,23 @@ int32_t __imported_wasix_32v1_dl_close(int32_t arg0) __attribute__((
 ));
 
 __wasi_errno_t __wasi_dl_close(
-    __wasi_dlopenid_t handle
+    __wasi_dl_handle_t handle
 ){
     int32_t ret = __imported_wasix_32v1_dl_close((int32_t) handle);
+    return (uint16_t) ret;
+}
+
+int32_t __imported_wasix_32v1_dl_error(int32_t arg0, int32_t arg1, int32_t arg2) __attribute__((
+    __import_module__("wasix_32v1"),
+    __import_name__("dl_error")
+));
+
+__wasi_errno_t __wasi_dl_error(
+    uint8_t * message,
+    __wasi_size_t message_len,
+    __wasi_size_t *retptr0
+){
+    int32_t ret = __imported_wasix_32v1_dl_error((int32_t) message, (int32_t) message_len, (intptr_t) retptr0);
     return (uint16_t) ret;
 }
 
