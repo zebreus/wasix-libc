@@ -10,7 +10,7 @@
 #include <wasi/libc.h>
 
 int dlclose(void *handle) {
-  __wasi_dl_handle_t dlid = (__wasi_dl_handle_t)handle;
+  __wasi_dl_handle_t dlid = (__wasi_dl_handle_t)(size_t)handle;
   __wasi_errno_t error = __wasi_dl_close(dlid);
   return 0;
 }
@@ -27,11 +27,11 @@ char *dlerror() {
 void *dlopen(const char *filename, int flags) {
   __wasi_dl_handle_t dlid;
   __wasi_errno_t error = __wasi_dl_open(filename, &dlid);
-  return (void *)dlid;
+  return (void *)(size_t)dlid;
 }
 
 void *dlsym(void *__restrict handle, const char *__restrict symbol) {
-  __wasi_dl_handle_t dlid = (__wasi_dl_handle_t)handle;
+  __wasi_dl_handle_t dlid = (__wasi_dl_handle_t)(size_t)handle;
   __wasi_pointersize_t result = 0;
   __wasi_errno_t error = __wasi_dl_load_symbol(symbol, dlid, &result);
   return (void *)result;

@@ -371,6 +371,10 @@ __wasi_chdir
 __wasi_clock_res_get
 __wasi_clock_time_get
 __wasi_clock_time_set
+__wasi_dl_close
+__wasi_dl_error
+__wasi_dl_load_symbol
+__wasi_dl_open
 __wasi_environ_get
 __wasi_environ_sizes_get
 __wasi_epoll_create
@@ -439,6 +443,7 @@ __wasi_proc_parent
 __wasi_proc_raise
 __wasi_proc_raise_interval
 __wasi_proc_signal
+__wasi_proc_snapshot
 __wasi_proc_spawn
 __wasi_random_get
 __wasi_resolve
@@ -739,6 +744,10 @@ difftime
 dirfd
 dirname
 div
+dlclose
+dlerror
+dlopen
+dlsym
 dngettext
 dprintf
 drand48
@@ -1716,6 +1725,7 @@ wait3
 wait4
 waitpid
 wasi_thread_start
+wasix_proc_snapshot
 wcpcpy
 wcpncpy
 wcrtomb

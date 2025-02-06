@@ -64,6 +64,10 @@ __imported_wasi_thread_spawn
 __imported_wasix_64v1_callback_signal
 __imported_wasix_64v1_chdir
 __imported_wasix_64v1_clock_time_set
+__imported_wasix_64v1_dl_close
+__imported_wasix_64v1_dl_error
+__imported_wasix_64v1_dl_load_symbol
+__imported_wasix_64v1_dl_open
 __imported_wasix_64v1_epoll_create
 __imported_wasix_64v1_epoll_ctl
 __imported_wasix_64v1_epoll_wait
@@ -95,6 +99,7 @@ __imported_wasix_64v1_proc_join
 __imported_wasix_64v1_proc_parent
 __imported_wasix_64v1_proc_raise_interval
 __imported_wasix_64v1_proc_signal
+__imported_wasix_64v1_proc_snapshot
 __imported_wasix_64v1_proc_spawn
 __imported_wasix_64v1_resolve
 __imported_wasix_64v1_sock_accept_v2
@@ -132,9 +137,11 @@ __imported_wasix_64v1_tty_set
 __letf2
 __lttf2
 __main_argc_argv
+__memory_base
 __netf2
 __stack_pointer
 __subtf3
+__table_base
 __tls_align
 __tls_base
 __tls_size
