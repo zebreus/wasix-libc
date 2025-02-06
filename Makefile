@@ -366,6 +366,8 @@ CFLAGS += -Wall -Wextra -Werror \
   -Wno-ignored-pragmas \
   -Wno-unused-but-set-variable \
   -Wno-unknown-warning-option
+# Enable relocatable code 
+CFLAGS += -fPIC
 
 # Configure support for threads.
 ifeq ($(THREAD_MODEL), single)

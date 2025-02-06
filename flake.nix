@@ -41,9 +41,8 @@
           ])
         ];
 
-        crossPkgs = pkgs.pkgsCross.wasi32;
-
       in
+      # crossPkgs = pkgs.pkgsCross.wasi32;
       rec {
         name = "wasix-libc";
         # TODO: All the code here is a mess, clean it up
@@ -54,58 +53,83 @@
         '';
 
         # Environment for building the sysroot
-        devShells.default =
-          # crossPkgs.callPackage (
-          #   {
-          #     stdenvNoCC,
-          #     cmake,
-          #     llvmPackages_14,
-          #     python3,
-          #   }:
-          pkgs.stdenvNoCC.mkDerivation {
-            name = "foo";
-            nativeBuildInputs = [
-              (pkgs.wrapCCWith {
-                cc = pkgs.llvmPackages_14.clang.cc;
-                bintools = pkgs.llvmPackages_14.bintools.override {
-                  defaultHardeningFlags = [ ];
-                };
-                libcxx = pkgs.llvmPackages_14.libcxx;
-                extraBuildCommands = ''
-                  # tr '\n' ' ' < $out/nix-support/cc-cflags > cc-cflags.tmp
-                  # mv cc-cflags.tmp $out/nix-support/cc-cflags
-                  echo "-isystem ${pkgs.llvmPackages_14.libclang.lib}/lib/clang/14.0.6/include -I/home/lennart/Documents/wasix-libc/build/libcxx/../../sysroot/include" >> $out/nix-support/cc-cflags
-                  echo "" > $out/nix-support/libcxx-cxxflags
-                '';
-              })
-              pkgs.clang
-              pkgs.cmake
-              pkgs.llvmPackages_14.llvm
-              pkgs.llvmPackages_14.lld
-              pkgs.llvmPackages_14.clang-tools
-              pkgs.python3
+        devShells.default = pkgs.stdenvNoCC.mkDerivation {
+          name = "foo";
+          nativeBuildInputs = [
+            (pkgs.wrapCCWith {
+              cc = pkgs.llvmPackages_18.clang.cc;
+              bintools = pkgs.llvmPackages_18.bintools.override {
+                defaultHardeningFlags = [ ];
+              };
+              libcxx = pkgs.llvmPackages_18.libcxx;
+              extraBuildCommands = ''
+                # tr '\n' ' ' < $out/nix-support/cc-cflags > cc-cflags.tmp
+                # mv cc-cflags.tmp $out/nix-support/cc-cflags
+                CLANG_INCLUDE_DIR="$(echo ${pkgs.llvmPackages_18.libclang.lib}/lib/clang/*/include)"
+                echo "-isystem $CLANG_INCLUDE_DIR -I/home/lennart/Documents/wasix-libc/build/libcxx/../../sysroot/include" >> $out/nix-support/cc-cflags
+                echo "" > $out/nix-support/libcxx-cxxflags
+              '';
+            })
+            pkgs.clang
+            pkgs.cmake
+            pkgs.llvmPackages_18.llvm
+            pkgs.llvmPackages_18.lld
+            pkgs.llvmPackages_18.clang-tools
+            pkgs.python3
 
-              rustToolchain
-            ];
-            shellHook = ''
-              export NIX_CFLAGS_COMPILE="$NIX_CFLAGS_COMPILE -Wno-error=unused-command-line-argument"
-              unset NM
-              unset AR
-            '';
-          };
+            rustToolchain
+          ];
+          shellHook = ''
+            export NIX_CFLAGS_COMPILE="$NIX_CFLAGS_COMPILE -Wno-error=unused-command-line-argument"
+            unset NM
+            unset AR
+          '';
+        };
 
         # Environment with a clang compiler that can target wasm32-wasi
         # _works on my machine_
         devShells.usable-environment = pkgs.callPackage (
           {
             stdenvNoCC,
-            llvmPackages_14,
+            llvmPackages_18,
           }:
           (stdenvNoCC).mkDerivation {
             name = "foo";
             nativeBuildInputs = [
               packages.wasix-clang
             ];
+          }
+        ) { };
+
+        packages.wasi-sdk = pkgs.runCommand "wasi-sdk" { } ''
+          mkdir -p $out/bin
+          ln -s ${packages.wasix-clang}/bin/ar $out/bin/ar
+          ln -s ${packages.wasix-clang}/bin/nm $out/bin/nm
+          ln -s ${packages.wasix-clang}/bin/clang $out/bin/clang
+          ln -s ${packages.wasix-clang}/bin/clang++ $out/bin/clang++
+          ln -s ${packages.wasix-clang}/bin/ranlib $out/bin/ranlib
+          ln -s ${pkgs.llvmPackages_18.bintools-unwrapped}/bin/wasm-ld $out/bin/wasm-ld
+          ln -s ${pkgs.binaryen}/bin/wasm-opt $out/bin/wasm-opt
+
+          # Extra tools for convenience
+          ln -s ${pkgs.wabt}/bin/* $out/bin
+        '';
+
+        devShells.wasi-sdk = pkgs.callPackage (
+          {
+            stdenvNoCC,
+          }:
+          (stdenvNoCC).mkDerivation {
+            name = "foo";
+            nativeBuildInputs = [
+              packages.wasi-sdk
+            ];
+            shellHook = ''
+              export WASI_SDK="${packages.wasi-sdk}"
+              export WASIX_SYSROOT="/home/lennart/Documents/wasix-libc/sysroot"
+              unset NIX_CFLAGS_COMPILE
+              unset NIX_LDFLAGS
+            '';
           }
         ) { };
 
@@ -118,17 +142,17 @@
           cc:
           pkgs.runCommand "libclang-include" { } ''
             mkdir -p $out
-            cp -ar ${cc.lib}/lib/clang/${cc.version}/include $out
+            cp -ar ${cc.lib}/lib/clang/18/include $out
           '';
 
         packages.wasix-clang-no-rt = (
           pkgs.wrapCCWith rec {
-            cc = pkgs.llvmPackages_14.clang.cc;
-            bintools = pkgs.llvmPackages_14.bintoolsNoLibc.override {
+            cc = pkgs.llvmPackages_18.clang.cc;
+            bintools = pkgs.llvmPackages_18.bintoolsNoLibc.override {
               defaultHardeningFlags = [ ];
             };
             # libcxx = null;
-            libcxx = pkgs.llvmPackages_14.libcxx;
+            libcxx = pkgs.llvmPackages_18.libcxx;
             extraBuildCommands =
               ''
                 # Otherwise llvm wont built, because nix specifies some unused args
@@ -157,16 +181,16 @@
 
         packages.wasix-clang = (
           pkgs.wrapCCWith rec {
-            cc = pkgs.llvmPackages_14.clang.cc;
-            bintools = pkgs.llvmPackages_14.bintoolsNoLibc.override {
+            cc = pkgs.llvmPackages_18.clang.cc;
+            bintools = pkgs.llvmPackages_18.bintoolsNoLibc.override {
               defaultHardeningFlags = [ ];
             };
             # libcxx = null;
-            libcxx = pkgs.llvmPackages_14.libcxx;
+            libcxx = pkgs.llvmPackages_18.libcxx;
             extraBuildCommands =
               ''
                 # Otherwise llvm wont built, because nix specifies some unused args
-                echo "-Wno-error=unused-command-line-argument" >> $out/nix-support/cc-cflags
+                echo "-Wno-error=unused-command-line-argument -Wno-macro-redefined" >> $out/nix-support/cc-cflags
                 echo "-I/home/lennart/Documents/wasix-libc/build/libcxx/../../sysroot/include" >> $out/nix-support/cc-cflags
                 # Dont even try to link the system libcxx
                 echo "" > $out/nix-support/libcxx-cxxflags
@@ -330,107 +354,107 @@
         #     }
         # ) { };
 
-        # Environment where I can built libc
-        # Works, but has a lot of useless settings
-        devShells.build-libc-shell = crossPkgs.callPackage (
-          {
-            stdenvNoCC,
-            llvmPackages_14,
-            rust-bindgen,
-            glibc_multi,
-            cmake,
-          }:
-          (stdenvNoCC.override {
-            # bintools = (
-            #   llvmPackages_14.bintools.override {
-            #     defaultHardeningFlags = [ ];
-            #   }
-            # );
-          }).mkDerivation
-            {
-              name = "foo";
-              nativeBuildInputs = [
-                (pkgs.llvmPackages_14.clang.override {
-                  bintools = (
-                    pkgs.llvmPackages_14.bintools.override {
-                      defaultHardeningFlags = [ ];
-                    }
-                  );
-                })
-                llvmPackages_14.llvm
-                llvmPackages_14.lld
-                llvmPackages_14.clang-tools
-                cmake
-                rustToolchain
-              ];
-              shellHook = ''
-                export NIX_CFLAGS_COMPILE="$NIX_CFLAGS_COMPILE -Wno-error=unused-command-line-argument"
-                unset NM
-                unset AR
-              '';
-            }
-        ) { };
+        # # Environment where I can built libc
+        # # Works, but has a lot of useless settings
+        # devShells.build-libc-shell = crossPkgs.callPackage (
+        #   {
+        #     stdenvNoCC,
+        #     llvmPackages_14,
+        #     rust-bindgen,
+        #     glibc_multi,
+        #     cmake,
+        #   }:
+        #   (stdenvNoCC.override {
+        #     # bintools = (
+        #     #   llvmPackages_14.bintools.override {
+        #     #     defaultHardeningFlags = [ ];
+        #     #   }
+        #     # );
+        #   }).mkDerivation
+        #     {
+        #       name = "foo";
+        #       nativeBuildInputs = [
+        #         (pkgs.llvmPackages_14.clang.override {
+        #           bintools = (
+        #             pkgs.llvmPackages_14.bintools.override {
+        #               defaultHardeningFlags = [ ];
+        #             }
+        #           );
+        #         })
+        #         llvmPackages_14.llvm
+        #         llvmPackages_14.lld
+        #         llvmPackages_14.clang-tools
+        #         cmake
+        #         rustToolchain
+        #       ];
+        #       shellHook = ''
+        #         export NIX_CFLAGS_COMPILE="$NIX_CFLAGS_COMPILE -Wno-error=unused-command-line-argument"
+        #         unset NM
+        #         unset AR
+        #       '';
+        #     }
+        # ) { };
 
-        # Environment where I can built libcxx
-        # Works, but has a lot of useless settings
-        devShells.build-libcxx-shell =
-          (pkgs.mkShell.override {
-            stdenv = pkgs.stdenvNoCC;
-            # stdenv = pkgs.llvmPackages_14.stdenv;
-            # stdenv = pkgs.pkgsCross.wasi32.llvmPackages_14.stdenv;
-            # stdenv = clang_nolibc.stdenv;
-            # stdenv =
-            #   (pkgs.llvmPackages_14.override {
-            #     bintools = (
-            #       pkgs.llvmPackages_14.bintools.override {
-            #         defaultHardeningFlags = [ ];
-            #       }
-            #     );
-            #   }).stdenv;
-            # stdenv =
-            #   (pkgs.clang_14.override {
-            #     bintools = (
-            #       pkgs.llvmPackages_14.bintools.override {
-            #         defaultHardeningFlags = [ ];
-            #       }
-            #     );
-            #   }).stdenv;
-          })
-            {
-              buildInputs = [
-                (pkgs.wrapCCWith {
-                  cc = pkgs.llvmPackages_14.clang.cc;
-                  bintools = (
-                    pkgs.llvmPackages_14.bintoolsNoLibc.override {
-                      defaultHardeningFlags = [ ];
-                    }
-                  );
-                  libcxx = pkgs.llvmPackages_14.libcxx;
-                  extraBuildCommands = ''
-                    # tr '\n' ' ' < $out/nix-support/cc-cflags > cc-cflags.tmp
-                    # mv cc-cflags.tmp $out/nix-support/cc-cflags
-                    echo "-isystem ${pkgs.llvmPackages_14.libclang.lib}/lib/clang/14.0.6/include -I/home/lennart/Documents/wasix-libc/build/libcxx/../../sysroot/include" >> $out/nix-support/cc-cflags
-                    echo "" > $out/nix-support/libcxx-cxxflags
-                  '';
-                  libc = null;
-                })
-                pkgs.cmake
-                pkgs.python3
-              ];
-              shellHook = ''
-                export NIX_CFLAGS_COMPILE="$NIX_CFLAGS_COMPILE -Wno-error=unused-command-line-argument -I/home/lennart/Documents/wasix-libc/build/libcxx/../../sysroot/include"
-                # unset NM
-                # unset AR
-              '';
-              CPATH = builtins.concatStringsSep ":" [
-                (pkgs.lib.makeSearchPathOutput "dev" "include" [ pkgs.llvmPackages_14.libclang.lib ])
-                "-isystem ${pkgs.llvmPackages_14.libclang.lib}/lib/clang/14.0.6/include"
-                # (pkgs.lib.makeSearchPath "resource-root/include" [ pkgs.llvmPackages_14.clang ])
-              ];
-              CFLAGS = "-isystem ${pkgs.llvmPackages_14.libclang.lib}/lib/clang/14.0.6/include";
-              # LLVM_DIR = "${pkgs.llvmPackages_14.libllvm.dev}/lib/cmake/llvm";
-              # STUFF="-isystem /nix/store/c9q5790qgzxxkbcdkmbd67icq1gqija2-libcxx-12.0.1-dev/include -isystem /nix/store/cp0m6qj9xysasirxixyfglcr1122x3ss-libcxxabi-12.0.1-dev/include -isystem /nix/store/jf5j1vybrzjr5fz6pv315m6w9qmbvi9f-compiler-rt-libc-12.0.1-dev/include -iframework /nix/store/48w7px4bh6bjhgfz3w74ij5s24j4mxxn-apple-framework-CoreFoundation-11.0.0/Library/Frameworks -isystem /nix/store/cirjwpbnqsnj0600x3k2643vll58aqf7-libobjc-11.0.0/include -isystem /nix/store/c9q5790qgzxxkbcdkmbd67icq1gqija2-libcxx-12.0.1-dev/include -isystem /nix/store/cp0m6qj9xysasirxixyfglcr1122x3ss-libcxxabi-12.0.1-dev/include -isystem /nix/store/jf5j1vybrzjr5fz6pv315m6w9qmbvi9f-compiler-rt-libc-12.0.1-dev/include -iframework /nix/store/48w7px4bh6bjhgfz3w74ij5s24j4mxxn-apple-framework-CoreFoundation-11.0.0/Library/Frameworks -isystem /nix/store/cirjwpbnqsnj0600x3k2643vll58aqf7-libobjc-11.0.0/include"
-            };
+        # # Environment where I can built libcxx
+        # # Works, but has a lot of useless settings
+        # devShells.build-libcxx-shell =
+        #   (pkgs.mkShell.override {
+        #     stdenv = pkgs.stdenvNoCC;
+        #     # stdenv = pkgs.llvmPackages_14.stdenv;
+        #     # stdenv = pkgs.pkgsCross.wasi32.llvmPackages_14.stdenv;
+        #     # stdenv = clang_nolibc.stdenv;
+        #     # stdenv =
+        #     #   (pkgs.llvmPackages_14.override {
+        #     #     bintools = (
+        #     #       pkgs.llvmPackages_14.bintools.override {
+        #     #         defaultHardeningFlags = [ ];
+        #     #       }
+        #     #     );
+        #     #   }).stdenv;
+        #     # stdenv =
+        #     #   (pkgs.clang_14.override {
+        #     #     bintools = (
+        #     #       pkgs.llvmPackages_14.bintools.override {
+        #     #         defaultHardeningFlags = [ ];
+        #     #       }
+        #     #     );
+        #     #   }).stdenv;
+        #   })
+        #     {
+        #       buildInputs = [
+        #         (pkgs.wrapCCWith {
+        #           cc = pkgs.llvmPackages_14.clang.cc;
+        #           bintools = (
+        #             pkgs.llvmPackages_14.bintoolsNoLibc.override {
+        #               defaultHardeningFlags = [ ];
+        #             }
+        #           );
+        #           libcxx = pkgs.llvmPackages_14.libcxx;
+        #           extraBuildCommands = ''
+        #             # tr '\n' ' ' < $out/nix-support/cc-cflags > cc-cflags.tmp
+        #             # mv cc-cflags.tmp $out/nix-support/cc-cflags
+        #             echo "-isystem ${pkgs.llvmPackages_14.libclang.lib}/lib/clang/14.0.6/include -I/home/lennart/Documents/wasix-libc/build/libcxx/../../sysroot/include" >> $out/nix-support/cc-cflags
+        #             echo "" > $out/nix-support/libcxx-cxxflags
+        #           '';
+        #           libc = null;
+        #         })
+        #         pkgs.cmake
+        #         pkgs.python3
+        #       ];
+        #       shellHook = ''
+        #         export NIX_CFLAGS_COMPILE="$NIX_CFLAGS_COMPILE -Wno-error=unused-command-line-argument -I/home/lennart/Documents/wasix-libc/build/libcxx/../../sysroot/include"
+        #         # unset NM
+        #         # unset AR
+        #       '';
+        #       CPATH = builtins.concatStringsSep ":" [
+        #         (pkgs.lib.makeSearchPathOutput "dev" "include" [ pkgs.llvmPackages_14.libclang.lib ])
+        #         "-isystem ${pkgs.llvmPackages_14.libclang.lib}/lib/clang/14.0.6/include"
+        #         # (pkgs.lib.makeSearchPath "resource-root/include" [ pkgs.llvmPackages_14.clang ])
+        #       ];
+        #       CFLAGS = "-isystem ${pkgs.llvmPackages_14.libclang.lib}/lib/clang/14.0.6/include";
+        #       # LLVM_DIR = "${pkgs.llvmPackages_14.libllvm.dev}/lib/cmake/llvm";
+        #       # STUFF="-isystem /nix/store/c9q5790qgzxxkbcdkmbd67icq1gqija2-libcxx-12.0.1-dev/include -isystem /nix/store/cp0m6qj9xysasirxixyfglcr1122x3ss-libcxxabi-12.0.1-dev/include -isystem /nix/store/jf5j1vybrzjr5fz6pv315m6w9qmbvi9f-compiler-rt-libc-12.0.1-dev/include -iframework /nix/store/48w7px4bh6bjhgfz3w74ij5s24j4mxxn-apple-framework-CoreFoundation-11.0.0/Library/Frameworks -isystem /nix/store/cirjwpbnqsnj0600x3k2643vll58aqf7-libobjc-11.0.0/include -isystem /nix/store/c9q5790qgzxxkbcdkmbd67icq1gqija2-libcxx-12.0.1-dev/include -isystem /nix/store/cp0m6qj9xysasirxixyfglcr1122x3ss-libcxxabi-12.0.1-dev/include -isystem /nix/store/jf5j1vybrzjr5fz6pv315m6w9qmbvi9f-compiler-rt-libc-12.0.1-dev/include -iframework /nix/store/48w7px4bh6bjhgfz3w74ij5s24j4mxxn-apple-framework-CoreFoundation-11.0.0/Library/Frameworks -isystem /nix/store/cirjwpbnqsnj0600x3k2643vll58aqf7-libobjc-11.0.0/include"
+        #     };
 
         formatter = pkgs.nixfmt-rfc-style;
 

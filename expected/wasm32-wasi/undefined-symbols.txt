@@ -136,9 +136,11 @@ __imported_wasix_32v1_tty_set
 __letf2
 __lttf2
 __main_argc_argv
+__memory_base
 __netf2
 __stack_pointer
 __subtf3
+__table_base
 __tls_align
 __tls_base
 __tls_size
