@@ -8,7 +8,7 @@ NM ?= $(patsubst %clang,%llvm-nm,$(filter-out ccache sccache,$(CC)))
 ifeq ($(origin AR), default)
 AR = $(patsubst %clang,%llvm-ar,$(filter-out ccache sccache,$(CC)))
 endif
-EXTRA_CFLAGS ?= -O2 -DNDEBUG -ftls-model=local-exec -D_WASI_EMULATED_MMAN -D_WASI_EMULATED_PROCESS_CLOCKS
+EXTRA_CFLAGS ?= -O2 -DNDEBUG -ftls-model=local-exec -D_WASI_EMULATED_MMAN -D_WASI_EMULATED_PROCESS_CLOCKS 
 # The directory where we build the sysroot.
 SYSROOT ?= $(CURDIR)/sysroot
 # A directory to install to for "make install".
@@ -23,11 +23,33 @@ BUILD_LIBC_TOP_HALF ?= yes
 OBJDIR ?= build/$(TARGET_TRIPLE)
 # Whether to compile with PIC (needed for shared libs and dynamic linking)
 PIC ?= no
+# Enable exception handling
+EH ?= yes
+# Use the standardized exnref-based exception handling instead of the legacy one.
+EXNREF_EH ?= yes
 # Whether to verify the build symbols against the expected symbol list.
 # Disabling this is useful for development, where differences in the
 # exact version of clang can cause some symbols (especially macros) to
 # be added or removed.
 CHECK_SYMBOLS ?= yes
+
+INCLUDE_DLFCN ?= no
+ifeq ($(EH), no)
+INCLUDE_DLFCN = yes
+endif
+ifeq ($(PIC), yes)
+INCLUDE_DLFCN = yes
+endif
+
+ifeq ($(EH), yes)
+ifeq ($(PIC), no)
+EXPECTED_SYMBOLS_DIR=expected/$(TARGET_TRIPLE)-eh
+else
+EXPECTED_SYMBOLS_DIR=expected/$(TARGET_TRIPLE)-ehpic
+endif
+else
+EXPECTED_SYMBOLS_DIR=expected/$(TARGET_TRIPLE)
+endif
 
 # When the length is no larger than this threshold, we consider the
 # overhead of bulk memory opcodes to outweigh the performance benefit,
@@ -211,11 +233,6 @@ LIBC_TOP_HALF_MUSL_SOURCES = \
         linux/epoll.c \
         linux/eventfd.c \
         linux/setgroups.c \
-        ldso/dlclose.c \
-        ldso/dlerror.c \
-        ldso/dlinfo.c \
-        ldso/dlopen.c \
-        ldso/dlsym.c \
         stat/futimesat.c \
         legacy/getpagesize.c \
         legacy/getpass.c \
@@ -270,6 +287,17 @@ LIBC_TOP_HALF_MUSL_SOURCES = \
                  %/cimagf.c %/cimag.c %cimagl.c, \
                  $(wildcard $(LIBC_TOP_HALF_MUSL_SRC_DIR)/complex/*.c)) \
     $(wildcard $(LIBC_TOP_HALF_MUSL_SRC_DIR)/crypt/*.c)
+
+ifeq ($(INCLUDE_DLFCN), yes) 
+LIBC_TOP_HALF_MUSL_SOURCES += \
+    $(addprefix $(LIBC_TOP_HALF_MUSL_SRC_DIR)/, \
+        ldso/dlclose.c \
+        ldso/dlerror.c \
+        ldso/dlinfo.c \
+        ldso/dlopen.c \
+        ldso/dlsym.c \
+    )
+endif
 
 ifeq ($(THREAD_MODEL), posix)
 LIBC_TOP_HALF_MUSL_SOURCES += \
@@ -383,17 +411,28 @@ ASMFLAGS += --target=$(TARGET_TRIPLE)
 CFLAGS += -fno-trapping-math
 # Add all warnings, but disable a few which occur in third-party code.
 CFLAGS += -Wall -Wextra -Werror \
-  -Wno-incompatible-function-pointer-types \
-  -Wno-null-pointer-arithmetic \
-  -Wno-unused-parameter \
-  -Wno-sign-compare \
-  -Wno-unused-variable \
-  -Wno-unused-function \
-  -Wno-ignored-attributes \
-  -Wno-missing-braces \
-  -Wno-ignored-pragmas \
-  -Wno-unused-but-set-variable \
-  -Wno-unknown-warning-option
+ -Wno-incompatible-function-pointer-types \
+ -Wno-null-pointer-arithmetic \
+ -Wno-unused-parameter \
+ -Wno-sign-compare \
+ -Wno-unused-variable \
+ -Wno-unused-function \
+ -Wno-ignored-attributes \
+ -Wno-missing-braces \
+ -Wno-ignored-pragmas \
+ -Wno-unused-but-set-variable \
+ -Wno-unknown-warning-option \
+ -Wno-unused-command-line-argument
+
+ifeq ($(EH), yes)
+ifeq ($(EXNREF_EH), yes)
+    # Use wasm 3.0 exnref exception handling
+    CFLAGS += -mexception-handling -fwasm-exceptions -mllvm --wasm-enable-sjlj -Wl,-mllvm,--wasm-enable-sjlj -mllvm --wasm-enable-eh -Wl,-mllvm,--wasm-enable-eh -mllvm --wasm-use-legacy-eh=false -Wl,-mllvm,--wasm-use-legacy-eh=false -Wl,-mllvm,--exception-model=wasm
+else
+    # Use legacy exception handling
+    CFLAGS += -mexception-handling -fwasm-exceptions -mllvm --wasm-enable-sjlj -Wl,-mllvm,--wasm-enable-sjlj
+endif
+endif
 
 # Configure support for threads.
 ifeq ($(THREAD_MODEL), single)
@@ -533,6 +572,10 @@ MUSL_OMIT_HEADERS += \
     "sys/timerfd.h" \
     "sys/sysmacros.h" \
     "aio.h"
+
+ifeq ($(INCLUDE_DLFCN), no)
+MUSL_OMIT_HEADERS += "dlfcn.h"
+endif
 
 ifeq ($(THREAD_MODEL), single)
 # Remove headers not supported in single-threaded mode.
@@ -788,7 +831,7 @@ check-symbols: startup_files libc
 
 	# Check that the computed metadata matches the expected metadata.
 	# This ignores whitespace because on Windows the output has CRLF line endings.
-	diff -wur "expected/$(TARGET_TRIPLE)" "$(SYSROOT_SHARE)"
+	diff -wur "$(EXPECTED_SYMBOLS_DIR)" "$(SYSROOT_SHARE)"
 
 install: finish
 	mkdir -p "$(INSTALL_DIR)"

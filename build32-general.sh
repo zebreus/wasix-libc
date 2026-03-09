@@ -83,14 +83,14 @@ wasix_libc() {
         MAKEFLAGS="$MAKEFLAGS PIC=no"
     fi
     if [ "$EH" = "ON" ]; then
-        MAKEFLAGS="$MAKEFLAGS -f Makefile-eh"
+        MAKEFLAGS="$MAKEFLAGS EH=yes"
         if [ "$EXNREF_EH" = "ON" ]; then
             MAKEFLAGS="$MAKEFLAGS EXNREF_EH=yes"
         else
             MAKEFLAGS="$MAKEFLAGS EXNREF_EH=no"
         fi
     else
-        MAKEFLAGS="$MAKEFLAGS -f Makefile"
+        MAKEFLAGS="$MAKEFLAGS EH=no"
     fi
 
     # Cleanup previous build artifacts
